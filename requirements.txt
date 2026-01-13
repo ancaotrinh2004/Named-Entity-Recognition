@@ -1,0 +1,12 @@
+datasets
+transformers
+# torch
+pandas
+numpy
+matplotlib
+seaborn
+scikit-learn
+jupyter
+dvc[gs]
+mlflow
+google-cloud-storage

@@ -8,11 +8,11 @@ build/
 
 # Environment
 .env
-venv/
+.venv/
 env/
 
 # Data & Models
-data/
+# data/
 models/
 mlruns/
 *.h5
@@ -21,3 +21,11 @@ mlruns/
 # IDE
 .vscode/
 .idea/
+
+# DVC
+# /data/raw
+# .dvc/cache
+
+# GCP Credentials
+.gcp/
+*.json
