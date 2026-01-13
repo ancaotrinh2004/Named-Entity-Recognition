@@ -1,0 +1,23 @@
+# Python
+*.pyc
+__pycache__/
+*.ipynb_checkpoints
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+venv/
+env/
+
+# Data & Models
+data/
+models/
+mlruns/
+*.h5
+*.pkl
+
+# IDE
+.vscode/
+.idea/
