@@ -12,20 +12,25 @@ build/
 env/
 
 # Data & Models
-# data/
+# Không chặn cả thư mục data/, chỉ chặn nội dung bên trong
+data/**
+# Ngoại trừ các file .dvc để Git có thể theo dõi phiên bản dữ liệu
+!data/**/
+!data/**/*.dvc
+!data/.gitignore
+
 models/
 mlruns/
 *.h5
 *.pkl
 
-# IDE
-.vscode/
-.idea/
-
 # DVC
-# /data/raw
-# .dvc/cache
+.dvc/cache
+.dvc/tmp
+.dvc/log
 
 # GCP Credentials
 .gcp/
+
 *.json
+!data/**/*.json
