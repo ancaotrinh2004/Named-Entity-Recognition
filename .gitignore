@@ -34,3 +34,8 @@ mlruns/
 
 *.json
 !data/**/*.json
+
+# mlflow
+mlflow/minio_data
+mlflow/mlflow_data
+mlflow/mysql_data

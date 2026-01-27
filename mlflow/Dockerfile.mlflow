@@ -1,0 +1,33 @@
+FROM python:3.9-slim
+
+WORKDIR /mlflow
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    default-libmysqlclient-dev \
+    build-essential \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python packages
+RUN pip install --no-cache-dir \
+    mlflow==3.1.4 \
+    pymysql \
+    cryptography \
+    boto3 \
+    google-cloud-storage
+
+# Create mlflow user
+RUN useradd -m -u 1000 mlflow && \
+    chown -R mlflow:mlflow /mlflow
+
+USER mlflow
+
+EXPOSE 5000 5001
+
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:5000/health || exit 1
+
+CMD ["mlflow", "server", "--host", "0.0.0.0", "--port", "5000"]

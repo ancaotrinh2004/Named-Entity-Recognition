@@ -1,6 +1,6 @@
 datasets
 transformers
-# torch
+torch
 pandas
 numpy
 matplotlib
@@ -10,3 +10,6 @@ jupyter
 dvc[gs]
 mlflow
 google-cloud-storage
+mlflow==3.1.4
+boto3
+torchvision
