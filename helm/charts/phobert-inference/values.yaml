@@ -1,0 +1,33 @@
+model:
+  name: phobert-medical
+  namespace: model-serving
+  registryName: phobert-medical
+  version: "latest"
+
+image:
+  predictorRepository: ancaotrinh/phobert-medical-predictor
+  predictorTag: v4
+  # transformerRepository: ancaotrinh/phobert-medical-transformer
+  # transformerTag: v4  
+
+minio:
+  endpoint: "http://minio.mlops.svc.cluster.local:9000"
+  accessKey: minioadmin
+  secretKey: minioadmin123
+
+mlflow:
+  trackingUri: "http://mlflow.mlops.svc.cluster.local:5000"
+
+autoscaling:
+  minReplicas: 1
+  maxReplicas: 3
+  scaleTarget: 1
+  scaleMetric: concurrency
+
+resources:
+  predictor:
+    requests: { cpu: "100m", memory: "2Gi" }
+    limits: { cpu: "500m", memory: "4Gi" }
+  transformer:
+    requests: { cpu: "50m", memory: "512Mi" }
+    limits: { cpu: "500m", memory: "1Gi" }

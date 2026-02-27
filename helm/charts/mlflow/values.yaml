@@ -1,0 +1,30 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/mlflow/mlflow
+  tag: v3.1.4
+  pullPolicy: IfNotPresent
+
+service:
+  type: LoadBalancer
+  port: 5000
+
+minio:
+  endpoint: "http://minio.mlops.svc.cluster.local:9000"
+  accessKey: minioadmin
+  secretKey: minioadmin123
+  bucket: mlflow
+
+backend:
+  type: sqlite
+  path: /mlflow/mlflow.db
+
+artifactRoot: s3://mlflow/artifacts
+
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "250m"
+  limits:
+    memory: "1Gi"
+    cpu: "500m"

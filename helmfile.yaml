@@ -1,0 +1,33 @@
+helmDefaults:
+  createNamespace: true
+  wait: true
+  timeout: 600
+  cleanupOnFail: true
+  atomic: false
+
+repositories:
+  - name: prometheus-community
+    url: https://prometheus-community.github.io/helm-charts
+  - name: grafana
+    url: https://grafana.github.io/helm-charts
+
+releases:
+  - name: minio
+    namespace: mlops
+    chart: ./helm/charts/minio  # Giữ nguyên nếu thư mục này tồn tại
+    values:
+      - ./helm/charts/minio/values.yaml # Thêm ./ để đảm bảo là path tuyệt đối từ gốc helmfile
+
+  - name: mlflow
+    namespace: mlops
+    chart: ./helm/charts/mlflow
+    values:
+      - ./helm/charts/mlflow/values.yaml
+    needs:
+      - mlops/minio
+
+  - name: phobert-inference
+    namespace: model-serving
+    chart: ./helm/charts/phobert-inference
+    values:
+      - ./helm/charts/phobert-inference/values.yaml

@@ -1,0 +1,35 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: {{ .Values.model.name }}
+  namespace: {{ .Values.model.namespace }}
+spec:
+  predictor:
+    minReplicas: {{ .Values.autoscaling.minReplicas }}
+    maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+    containers:
+      - name: kserve-container
+        # Sử dụng image mới đã gộp logic Predictor + Transformer
+        image: {{ .Values.image.predictorRepository }}:{{ .Values.image.predictorTag }}
+        args:
+          - --model_name={{ .Values.model.name }}
+          - --http_port=8080
+        env:
+          - name: MLFLOW_TRACKING_URI
+            value: {{ .Values.mlflow.trackingUri | quote }}
+          - name: MLFLOW_S3_ENDPOINT_URL
+            value: {{ .Values.minio.endpoint | quote }}
+          - name: AWS_ACCESS_KEY_ID
+            value: {{ .Values.minio.accessKey | quote }}
+          - name: AWS_SECRET_ACCESS_KEY
+            value: {{ .Values.minio.secretKey | quote }}
+          - name: MODEL_NAME
+            value: {{ .Values.model.registryName | quote }}
+          - name: MODEL_VERSION
+            value: {{ .Values.model.version | quote }}
+        ports:
+          - containerPort: 8080
+            protocol: TCP
+            name: http1
+        resources:
+          {{- toYaml .Values.resources.predictor | nindent 10 }}

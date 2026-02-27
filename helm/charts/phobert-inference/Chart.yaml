@@ -1,0 +1,19 @@
+apiVersion: v2
+name: phobert-inference
+description: A Helm chart for deploying PhoBERT Medical NER model server on KServe
+type: application
+
+# Đây là phiên bản của Chart, thay đổi khi bạn thay đổi cấu trúc Chart
+version: 0.1.0
+
+# Đây là phiên bản của ứng dụng (Docker image version)
+appVersion: "v3"
+
+maintainers:
+  - name: anjuly
+    email: anjuly26th@gmail.com
+
+annotations:
+  category: MLOps
+  model: PhoBERT-NER
+  framework: KServe
