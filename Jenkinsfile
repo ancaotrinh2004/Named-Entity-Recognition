@@ -184,37 +184,42 @@ print(f'{coverage:.1f}')
         // ══════════════════════════════════════════════════════════════
         // STAGE 7 — Deploy with Helm
         // ══════════════════════════════════════════════════════════════
-        stage('Deploy with Helm') {
+            stage('Deploy with Helm') {
+            agent {
+                docker {
+                    image 'dtzar/helm-kubectl:3.14'
+                    reuseNode true
+                    args '--entrypoint=""'
+                }
+            }
             steps {
-                sh '''
-                    echo "🚀 Deploying Backend..."
-                    helm upgrade --install phobert-backend \
-                        ./helm/charts/backend \
-                        --namespace ingress-nginx \
-                        --create-namespace \
-                        -f helm/charts/backend/values.yaml \
-                        --set image.tag=${BUILD_NUMBER} \
-                        --wait \
-                        --timeout 10m
+                withCredentials([file(
+                    credentialsId: 'kubeconfig',
+                    variable: 'KUBECONFIG'
+                )]) {
+                    script {
+                        def backendNs = env.DEPLOY_ENV == 'production' ? 'ingress-nginx' : 'staging'
+                        def modelNs   = env.DEPLOY_ENV == 'production' ? 'model-serving'  : 'model-serving-staging'
 
-                    echo "🚀 Deploying Predictor..."
-                    helm upgrade --install phobert-inference \
-                        ./helm/charts/phobert-inference \
-                        --namespace model-serving \
-                        --create-namespace \
-                        -f helm/charts/phobert-inference/values.yaml \
-                        --set image.tag=${BUILD_NUMBER} \
-                        --wait \
-                        --timeout 15m
+                        sh """
+                            helm upgrade --install phobert-backend \
+                                ./helm/charts/backend \
+                                --namespace ${backendNs} \
+                                --create-namespace \
+                                -f helm/charts/backend/values.yaml \
+                                --set image.tag=${BUILD_NUMBER} \
+                                --wait --timeout 10m
 
-                    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                    echo "✅ All deployments completed!"
-                    echo "   Backend:   ${BACKEND_IMAGE}:${BUILD_NUMBER}"
-                    echo "   Predictor: ${PREDICTOR_IMAGE}:${BUILD_NUMBER}"
-                    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                    kubectl get pods -n ingress-nginx -l app=phobert-backend
-                    kubectl get pods -n model-serving -l app=phobert-inference
-                '''
+                            helm upgrade --install phobert-inference \
+                                ./helm/charts/phobert-inference \
+                                --namespace ${modelNs} \
+                                --create-namespace \
+                                -f helm/charts/phobert-inference/values.yaml \
+                                --set image.tag=${BUILD_NUMBER} \
+                                --wait --timeout 15m
+                        """
+                    }
+                }
             }
         }
     }
