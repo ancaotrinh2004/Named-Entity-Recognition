@@ -1,0 +1,16 @@
+apiVersion: v2
+name: phobert-backend
+description: A Helm chart for FastAPI backend - PhoBERT Medical NER API
+type: application
+
+version: 0.1.0
+appVersion: "1.0"
+
+maintainers:
+  - name: anjuly
+    email: anjuly26th@gmail.com
+
+annotations:
+  category: API
+  framework: FastAPI
+  service: Backend

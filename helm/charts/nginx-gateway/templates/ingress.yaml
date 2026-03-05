@@ -1,0 +1,52 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: phobert-gateway
+  namespace: ingress-nginx
+  annotations:
+    # ── IngressClass ────────────────────────────────────────
+    nginx.ingress.kubernetes.io/ingress-class: "nginx"
+
+    # ── API Key Auth — dùng External Auth Service (snippet bị disabled) ──
+    # Forward request đến api-key-auth service để validate X-API-Key header
+    nginx.ingress.kubernetes.io/auth-url: "http://api-key-auth.ingress-nginx.svc.cluster.local/auth"
+    nginx.ingress.kubernetes.io/auth-method: "GET"
+    # NGINX tự động forward tất cả client headers (gồm X-API-Key) lên auth service
+    # Sau khi auth thành công, inject X-Client-ID từ auth response vào upstream request
+    nginx.ingress.kubernetes.io/auth-response-headers: "X-Client-ID"
+
+    # ── Rate Limiting ───────────────────────────────────────
+    nginx.ingress.kubernetes.io/limit-rpm: {{ .Values.rateLimit.requestsPerMinute | quote }}
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: {{ .Values.rateLimit.burst | quote }}
+    nginx.ingress.kubernetes.io/limit-connections: "10"
+
+    # ── Proxy settings ──────────────────────────────────────
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+
+    # ── Rewrite → KServe endpoint ───────────────────────────
+    nginx.ingress.kubernetes.io/rewrite-target: /v1/models/{{ .Values.kserve.modelName }}:predict
+
+    # ── Host header cho Istio ───────────────────────────────
+    nginx.ingress.kubernetes.io/upstream-vhost: "{{ .Values.kserve.modelName }}.{{ .Values.kserve.namespace }}.{{ .Values.kserve.ingressIP }}.sslip.io"
+
+    # ── CORS ────────────────────────────────────────────────
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "POST, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "X-API-Key, Content-Type"
+
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: {{ .Values.host }}
+      http:
+        paths:
+          - path: /api/v1/predict
+            pathType: Exact
+            backend:
+              service:
+                name: istio-ingressgateway-external
+                port:
+                  number: 80

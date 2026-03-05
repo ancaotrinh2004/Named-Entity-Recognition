@@ -1,0 +1,15 @@
+---
+# ExternalName Service trỏ đến Istio IngressGateway
+# NGINX dùng service này làm upstream để forward request đến KServe
+apiVersion: v1
+kind: Service
+metadata:
+  name: istio-ingressgateway-external
+  namespace: ingress-nginx
+spec:
+  type: ExternalName
+  # Trỏ đến Istio IngressGateway service trong namespace istio-system
+  externalName: istio-ingressgateway.istio-system.svc.cluster.local
+  ports:
+    - port: 80
+      targetPort: 80

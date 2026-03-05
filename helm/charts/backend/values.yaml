@@ -1,0 +1,95 @@
+# Backend service configuration
+service:
+  name: phobert-backend
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+
+# Image configuration
+image:
+  repository: ancaotrinh/phobert-backend
+  tag: "v2"  # Override by CI/CD with git SHA
+  pullPolicy: IfNotPresent
+
+# Replica configuration
+replicaCount: 1
+
+# Resource limits
+resources:
+  requests:
+    cpu: "50m"
+    memory: "128Mi"
+  limits:
+    cpu: "200m"
+    memory: "256Mi"
+
+# Autoscaling
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Health checks
+healthCheck:
+  enabled: true
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: 8000
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /healthz
+      port: 8000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 2
+
+# Environment variables — không chứa secrets
+env:
+  GATEWAY_URL: "https://ingress-nginx-controller.ingress-nginx.svc.cluster.local"
+  GATEWAY_HOST: "api.phobert-medical.example.com"
+  KSERVE_PATH: "/api/v1/predict"
+  KSERVE_TIMEOUT: "30"
+  # Fix: đúng format JSON list để FastAPI parse thành list[str]
+  CORS_ORIGINS: '["*"]'
+
+# VALID_API_KEYS load từ K8s Secret — KHÔNG hardcode ở đây
+# Tạo secret trước khi deploy:
+#   kubectl create secret generic api-keys \
+#     --from-literal=valid-keys="sk-key1\nsk-key2" \
+#     -n api-gateway
+apiKeysSecret:
+  name: api-keys
+  key: valid-keys
+
+# Ingress — chỉ dùng API Key auth (đã có ở backend), bỏ basic-auth
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # basic-auth đã xóa — backend tự validate X-API-Key
+  hosts:
+    - host: "api.phobert-medical.example.com"
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: api-phobert-tls
+      hosts:
+        - api.phobert-medical.example.com
+
+# Service Account
+serviceAccount:
+  create: true
+  name: "phobert-backend"
+
+# Namespace
+namespace: ingress-nginx

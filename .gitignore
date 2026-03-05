@@ -39,3 +39,10 @@ mlruns/
 mlflow/minio_data
 mlflow/mlflow_data
 mlflow/mysql_data
+
+.coverage
+.pytest_cache/
+
+.terraform.lock.hcl
+terraform.tfstate.backup
+.terraform
