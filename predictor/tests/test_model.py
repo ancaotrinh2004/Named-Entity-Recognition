@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from unittest.mock import MagicMock, patch
-from model import (
+from app.model import (
     _serialize, _join_words, _merge_bio_tags, _build_profile, PhoBERTModel
 )
 
