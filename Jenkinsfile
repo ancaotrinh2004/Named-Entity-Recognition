@@ -12,7 +12,6 @@ pipeline {
 
         // ══════════════════════════════════════════════════════════════
         // STAGE 1 — Test Backend
-        // Dùng Docker agent có Python để chạy pytest
         // ══════════════════════════════════════════════════════════════
         stage('Test Backend') {
             agent {
@@ -163,62 +162,72 @@ print(f'{coverage:.1f}')
         stage('Approval for Deploy') {
             steps {
                 script {
-                    input(
+                    def userInput = input(
                         id: 'DeployApproval',
-                        message: "🚀 Deploy build #${BUILD_NUMBER} lên production?",
+                        message: "🚀 Deploy build #${BUILD_NUMBER} lên môi trường nào?",
                         ok: 'Deploy',
-                        submitter: 'jenkins-deployers',
+                        submitter: 'admin',
                         parameters: [
                             choice(
                                 name: 'DEPLOY_ENV',
                                 choices: ['production', 'staging'],
-                                description: 'Deploy environment'
+                                description: 'Chọn môi trường deploy'
                             )
                         ]
                     )
-                    echo "✅ Deploy approved"
+                    env.DEPLOY_ENV = userInput
+                    echo "✅ Deploy approved — environment: ${env.DEPLOY_ENV}"
                 }
             }
         }
 
         // ══════════════════════════════════════════════════════════════
         // STAGE 7 — Deploy with Helm
+        // Mount kubeconfig từ Jenkins home vào container
+        // Chạy: docker cp config.yaml jenkins:/var/jenkins_home/kubeconfig.yaml
         // ══════════════════════════════════════════════════════════════
-            stage('Deploy with Helm') {
+        stage('Deploy with Helm') {
             agent {
                 docker {
                     image 'dtzar/helm-kubectl:3.14'
                     reuseNode true
-                    args '--entrypoint=""'
+                    args '--entrypoint="" -v /var/jenkins_home/kubeconfig.yaml:/root/.kube/config'
                 }
             }
             steps {
-                withCredentials([file(
-                    credentialsId: 'kubeconfig',
-                    variable: 'KUBECONFIG'
-                )]) {
-                    script {
-                        def backendNs = env.DEPLOY_ENV == 'production' ? 'ingress-nginx' : 'staging'
-                        def modelNs   = env.DEPLOY_ENV == 'production' ? 'model-serving'  : 'model-serving-staging'
+                script {
+                    def backendNs = env.DEPLOY_ENV == 'production' ? 'ingress-nginx' : 'staging'
+                    def modelNs   = env.DEPLOY_ENV == 'production' ? 'model-serving'  : 'model-serving-staging'
 
-                        sh """
-                            helm upgrade --install phobert-backend \
-                                ./helm/charts/backend \
-                                --namespace ${backendNs} \
-                                --create-namespace \
-                                -f helm/charts/backend/values.yaml \
-                                --set image.tag=${BUILD_NUMBER} \
-                                --wait --timeout 10m
+                    echo "🚀 Deploying to ${env.DEPLOY_ENV}"
+                    echo "   Backend namespace:   ${backendNs}"
+                    echo "   Predictor namespace: ${modelNs}"
 
-                            helm upgrade --install phobert-inference \
-                                ./helm/charts/phobert-inference \
-                                --namespace ${modelNs} \
-                                --create-namespace \
-                                -f helm/charts/phobert-inference/values.yaml \
-                                --set image.tag=${BUILD_NUMBER} \
-                                --wait --timeout 15m
-                        """
-                    }
+                    sh """
+                        helm upgrade --install phobert-backend \
+                            ./helm/charts/backend \
+                            --namespace ${backendNs} \
+                            --create-namespace \
+                            -f helm/charts/backend/values.yaml \
+                            --set image.tag=${BUILD_NUMBER} \
+                            --wait --timeout 10m
+
+                        helm upgrade --install phobert-inference \
+                            ./helm/charts/phobert-inference \
+                            --namespace ${modelNs} \
+                            --create-namespace \
+                            -f helm/charts/phobert-inference/values.yaml \
+                            --set image.tag=${BUILD_NUMBER} \
+                            --wait --timeout 15m
+
+                        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                        echo "✅ Deployed to ${env.DEPLOY_ENV}!"
+                        echo "   Backend:   ${BACKEND_IMAGE}:${BUILD_NUMBER}"
+                        echo "   Predictor: ${PREDICTOR_IMAGE}:${BUILD_NUMBER}"
+                        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                        kubectl get pods -n ${backendNs} -l app=phobert-backend
+                        kubectl get pods -n ${modelNs} -l app=phobert-inference
+                    """
                 }
             }
         }
@@ -227,8 +236,6 @@ print(f'{coverage:.1f}')
     post {
         always {
             junit allowEmptyResults: true, testResults: '**/test-results.xml'
-
-            // Fix: dùng step() wrapper khi htmlpublisher plugin có thể chưa load
             script {
                 try {
                     publishHTML([
@@ -252,14 +259,8 @@ print(f'{coverage:.1f}')
                 }
             }
         }
-        success {
-            echo '✅ Pipeline thành công!'
-        }
-        failure {
-            echo '❌ Pipeline thất bại!'
-        }
-        aborted {
-            echo '⏸️ Pipeline bị hủy tại stage Approval.'
-        }
+        success { echo '✅ Pipeline thành công!' }
+        failure { echo '❌ Pipeline thất bại!' }
+        aborted { echo '⏸️ Pipeline bị hủy tại stage Approval.' }
     }
 }
