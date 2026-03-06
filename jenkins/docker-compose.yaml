@@ -1,11 +1,11 @@
 version: '3.8'
 services:
   jenkins:
-    image: jenkins/jenkins:lts
+    build: .  # Trỏ đến Dockerfile vừa tạo
     container_name: jenkins
     restart: unless-stopped
     privileged: true
-    user: root
+    user: root  # Sau khi cài xong CLI, có thể bỏ root để bảo mật hơn nếu muốn
     ports:
       - "8081:8080"
     volumes:

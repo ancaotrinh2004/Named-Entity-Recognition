@@ -189,9 +189,9 @@ print(f'{coverage:.1f}')
         stage('Deploy with Helm') {
             agent {
                 docker {
-                    image 'dtzar/helm-kubectl:3.14'
+                    image 'alpine/helm:3.14.0'
                     reuseNode true
-                    args '--entrypoint="" -v /var/jenkins_home:/var/jenkins_home' // Mount Jenkins home để truy cập kubeconfig
+                    args '-u root --entrypoint=/bin/sh -v /var/jenkins_home:/var/jenkins_home'
                 }
             }
             steps {
@@ -204,8 +204,13 @@ print(f'{coverage:.1f}')
                     echo "   Predictor namespace: ${modelNs}"
 
                     sh """
+                        apk add --no-cache curl
+                        curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
+                        chmod +x kubectl && mv kubectl /usr/local/bin/kubectl
+
                         helm upgrade --install phobert-backend \
                             ./helm/charts/backend \
+                            --kubeconfig /var/jenkins_home/kubeconfig.yaml \
                             --namespace ${backendNs} \
                             --create-namespace \
                             -f helm/charts/backend/values.yaml \
@@ -214,6 +219,7 @@ print(f'{coverage:.1f}')
 
                         helm upgrade --install phobert-inference \
                             ./helm/charts/phobert-inference \
+                            --kubeconfig /var/jenkins_home/kubeconfig.yaml \
                             --namespace ${modelNs} \
                             --create-namespace \
                             -f helm/charts/phobert-inference/values.yaml \
@@ -225,8 +231,8 @@ print(f'{coverage:.1f}')
                         echo "   Backend:   ${BACKEND_IMAGE}:${BUILD_NUMBER}"
                         echo "   Predictor: ${PREDICTOR_IMAGE}:${BUILD_NUMBER}"
                         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                        kubectl get pods -n ${backendNs} -l app=phobert-backend
-                        kubectl get pods -n ${modelNs} -l app=phobert-inference
+                        kubectl --kubeconfig /var/jenkins_home/kubeconfig.yaml get pods -n ${backendNs} -l app=phobert-backend
+                        kubectl --kubeconfig /var/jenkins_home/kubeconfig.yaml get pods -n ${modelNs} -l app=phobert-inference
                     """
                 }
             }
