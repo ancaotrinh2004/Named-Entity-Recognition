@@ -191,7 +191,7 @@ print(f'{coverage:.1f}')
                 docker {
                     image 'alpine/helm:3.14.0'
                     reuseNode true
-                    args '-u root --entrypoint=/bin/sh -v /var/jenkins_home:/var/jenkins_home'
+                    args '-u root -v /var/jenkins_home:/var/jenkins_home --entrypoint=""'
                 }
             }
             steps {
