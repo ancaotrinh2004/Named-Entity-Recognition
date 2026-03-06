@@ -191,7 +191,7 @@ print(f'{coverage:.1f}')
                 docker {
                     image 'dtzar/helm-kubectl:3.14'
                     reuseNode true
-                    args '--entrypoint="" -v /var/jenkins_home/kubeconfig.yaml:/root/.kube/config'
+                    args '--entrypoint="" -v /var/jenkins_home/kubeconfig.yaml:/tmp/kubeconfig.yaml'
                 }
             }
             steps {
