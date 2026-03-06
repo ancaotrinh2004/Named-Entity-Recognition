@@ -191,7 +191,7 @@ print(f'{coverage:.1f}')
                 docker {
                     image 'dtzar/helm-kubectl:3.14'
                     reuseNode true
-                    args '--entrypoint="" -v /var/jenkins_home/kubeconfig.yaml:/tmp/kubeconfig.yaml'
+                    args '--entrypoint="" -v /var/jenkins_home:/var/jenkins_home' // Mount Jenkins home để truy cập kubeconfig
                 }
             }
             steps {
