@@ -63,7 +63,7 @@ pipeline {
         }
 
         // ══════════════════════════════════════════════════════════════
-        // STAGE 3 — Check Coverage summary
+        // STAGE 3 — Check Coverage
         // ══════════════════════════════════════════════════════════════
         stage('Check Coverage') {
             agent {
@@ -182,58 +182,56 @@ print(f'{coverage:.1f}')
         }
 
         // ══════════════════════════════════════════════════════════════
-        // STAGE 7 — Deploy with Helm
-        // Mount kubeconfig từ Jenkins home vào container
-        // Chạy: docker cp config.yaml jenkins:/var/jenkins_home/kubeconfig.yaml
+        // STAGE 7 — Deploy with Helm (Kubernetes Cloud)
+        // Pod spin up trong GKE cluster, dùng ServiceAccount jenkins
+        // Image: ancaotrinh/helm-kubectl:latest (có helm + kubectl)
         // ══════════════════════════════════════════════════════════════
         stage('Deploy with Helm') {
             agent {
-                docker {
-                    image 'ancaotrinh/helm-kubectl:latest'
-                    reuseNode true
-                    args '-u root -v /var/jenkins_home:/var/jenkins_home'
+                kubernetes {
+                    containerTemplate {
+                        name 'helm'
+                        image 'ancaotrinh/jenkins:latest'
+                        alwaysPullImage true
+                    }
                 }
             }
             steps {
                 script {
-                    def backendNs = env.DEPLOY_ENV == 'production' ? 'ingress-nginx' : 'staging'
-                    def modelNs   = env.DEPLOY_ENV == 'production' ? 'model-serving'  : 'model-serving-staging'
+                    container('helm') {
+                        def backendNs = env.DEPLOY_ENV == 'production' ? 'ingress-nginx' : 'staging'
+                        def modelNs   = env.DEPLOY_ENV == 'production' ? 'model-serving'  : 'model-serving-staging'
 
-                    echo "🚀 Deploying to ${env.DEPLOY_ENV}"
-                    echo "   Backend namespace:   ${backendNs}"
-                    echo "   Predictor namespace: ${modelNs}"
+                        echo "🚀 Deploying to ${env.DEPLOY_ENV}"
+                        echo "   Backend namespace:   ${backendNs}"
+                        echo "   Predictor namespace: ${modelNs}"
 
-                    sh """
-                        apk add --no-cache curl
-                        curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
-                        chmod +x kubectl && mv kubectl /usr/local/bin/kubectl
+                        sh """
+                            helm upgrade --install phobert-backend \
+                                ./helm/charts/backend \
+                                --namespace ${backendNs} \
+                                --create-namespace \
+                                -f helm/charts/backend/values.yaml \
+                                --set image.tag=${BUILD_NUMBER} \
+                                --wait --timeout 10m
 
-                        helm upgrade --install phobert-backend \
-                            ./helm/charts/backend \
-                            --kubeconfig /var/jenkins_home/kubeconfig.yaml \
-                            --namespace ${backendNs} \
-                            --create-namespace \
-                            -f helm/charts/backend/values.yaml \
-                            --set image.tag=${BUILD_NUMBER} \
-                            --wait --timeout 10m
+                            helm upgrade --install phobert-inference \
+                                ./helm/charts/phobert-inference \
+                                --namespace ${modelNs} \
+                                --create-namespace \
+                                -f helm/charts/phobert-inference/values.yaml \
+                                --set image.tag=${BUILD_NUMBER} \
+                                --wait --timeout 15m
 
-                        helm upgrade --install phobert-inference \
-                            ./helm/charts/phobert-inference \
-                            --kubeconfig /var/jenkins_home/kubeconfig.yaml \
-                            --namespace ${modelNs} \
-                            --create-namespace \
-                            -f helm/charts/phobert-inference/values.yaml \
-                            --set image.tag=${BUILD_NUMBER} \
-                            --wait --timeout 15m
-
-                        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                        echo "✅ Deployed to ${env.DEPLOY_ENV}!"
-                        echo "   Backend:   ${BACKEND_IMAGE}:${BUILD_NUMBER}"
-                        echo "   Predictor: ${PREDICTOR_IMAGE}:${BUILD_NUMBER}"
-                        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                        kubectl --kubeconfig /var/jenkins_home/kubeconfig.yaml get pods -n ${backendNs} -l app=phobert-backend
-                        kubectl --kubeconfig /var/jenkins_home/kubeconfig.yaml get pods -n ${modelNs} -l app=phobert-inference
-                    """
+                            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                            echo "✅ Deployed to ${env.DEPLOY_ENV}!"
+                            echo "   Backend:   ${BACKEND_IMAGE}:${BUILD_NUMBER}"
+                            echo "   Predictor: ${PREDICTOR_IMAGE}:${BUILD_NUMBER}"
+                            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                            kubectl get pods -n ${backendNs} -l app=phobert-backend
+                            kubectl get pods -n ${modelNs} -l app=phobert-inference
+                        """
+                    }
                 }
             }
         }
@@ -261,7 +259,7 @@ print(f'{coverage:.1f}')
                         reportName: 'Predictor Coverage Report'
                     ])
                 } catch (err) {
-                    echo "⚠️ publishHTML skipped: htmlpublisher plugin chưa cài — ${err.message}"
+                    echo "⚠️ publishHTML skipped: ${err.message}"
                 }
             }
         }
