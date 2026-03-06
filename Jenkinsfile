@@ -189,9 +189,9 @@ print(f'{coverage:.1f}')
         stage('Deploy with Helm') {
             agent {
                 docker {
-                    image 'alpine/helm:3.14.0'
+                    image 'ancaotrinh/helm-kubectl:latest'
                     reuseNode true
-                    args '-u root -v /var/jenkins_home:/var/jenkins_home --entrypoint=""'
+                    args '-u root -v /var/jenkins_home:/var/jenkins_home'
                 }
             }
             steps {
