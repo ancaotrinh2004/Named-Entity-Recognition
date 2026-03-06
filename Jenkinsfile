@@ -191,7 +191,7 @@ print(f'{coverage:.1f}')
                 kubernetes {
                     containerTemplate {
                         name 'helm'
-                        image 'ancaotrinh/jenkins:latest'
+                        image 'ancaotrinh/helm-kubectl:latest'
                         alwaysPullImage true
                     }
                 }
@@ -240,28 +240,7 @@ print(f'{coverage:.1f}')
     post {
         always {
             junit allowEmptyResults: true, testResults: '**/test-results.xml'
-            script {
-                try {
-                    publishHTML([
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: false,
-                        keepAll: true,
-                        reportDir: 'backend/htmlcov',
-                        reportFiles: 'index.html',
-                        reportName: 'Backend Coverage Report'
-                    ])
-                    publishHTML([
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: false,
-                        keepAll: true,
-                        reportDir: 'predictor/htmlcov',
-                        reportFiles: 'index.html',
-                        reportName: 'Predictor Coverage Report'
-                    ])
-                } catch (err) {
-                    echo "⚠️ publishHTML skipped: ${err.message}"
-                }
-            }
+
         }
         success { echo '✅ Pipeline thành công!' }
         failure { echo '❌ Pipeline thất bại!' }

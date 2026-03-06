@@ -1,13 +1,14 @@
-version: '3.8'
+version: 3.8
 services:
   jenkins:
-    build: .  # Trỏ đến Dockerfile vừa tạo
+    build: .
     container_name: jenkins
     restart: unless-stopped
     privileged: true
-    user: root  # Sau khi cài xong CLI, có thể bỏ root để bảo mật hơn nếu muốn
+    user: root
     ports:
       - "8081:8080"
+      - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
