@@ -221,7 +221,7 @@ print(f'{coverage:.1f}')
                                 --namespace ${modelNs} \
                                 --create-namespace \
                                 -f helm/charts/phobert-inference/values.yaml \
-                                --set image.tag=${BUILD_NUMBER} \
+                                --set image.predictorTag=${BUILD_NUMBER} \
                                 --wait --timeout 15m
 
                             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
