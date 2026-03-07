@@ -191,9 +191,10 @@ print(f'{coverage:.1f}')
                 kubernetes {
                     containerTemplate {
                         name 'helm'
-                        image 'ancaotrinh/helm-kubectl:latest'
+                        image 'ancaotrinh/jenkins:latest'
                         alwaysPullImage true
                     }
+                    
                 }
             }
             steps {
