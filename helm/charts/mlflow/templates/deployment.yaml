@@ -47,4 +47,5 @@ spec:
           {{- toYaml .Values.resources | nindent 10 }}
       volumes:
       - name: mlflow-data
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: {{ include "mlflow.fullname" . }}-pvc

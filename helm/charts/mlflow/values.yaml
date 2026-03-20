@@ -24,7 +24,13 @@ artifactRoot: s3://mlflow/artifacts
 resources:
   requests:
     memory: "512Mi"
-    cpu: "250m"
+    cpu: "50m"
   limits:
     memory: "1Gi"
-    cpu: "500m"
+    cpu: "250m"
+
+# Thêm vào values.yaml
+persistence:
+  enabled: true
+  size: 1Gi
+  storageClass: "standard" # Hoặc storageclass của cluster bạn
