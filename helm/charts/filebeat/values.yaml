@@ -1,0 +1,59 @@
+eck-beats:
+  enabled: true
+  spec:
+    type: filebeat
+    dataset: kubernetes
+    elasticsearchRef:
+      name: elasticsearch
+    config:
+      filebeat.inputs:
+        - type: filestream
+          id: kubernetes-container-logs
+          paths:
+            - /var/log/containers/*.log
+          prospector.scanner.symlinks: true # Quan trọng để đọc link log
+      processors:
+        - add_kubernetes_metadata:
+            host: ${NODE_NAME}
+            matchers:
+              - logs_path:
+                  logs_path: "/var/log/containers/"
+    daemonSet:
+      podTemplate:
+        spec:
+          serviceAccountName: filebeat
+          automountServiceAccountToken: true
+          terminationGracePeriodSeconds: 30
+          hostNetwork: true
+          dnsPolicy: ClusterFirstWithHostNet
+          containers:
+          - name: filebeat
+            securityContext:
+              runAsUser: 0 # Chạy với quyền root
+              privileged: true
+            env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            # Gắn các thư mục log thực tế từ Node vào trong Container
+            volumeMounts:
+            - name: varlogcontainers
+              mountPath: /var/log/containers
+              readOnly: true
+            - name: varlogpods
+              mountPath: /var/log/pods
+              readOnly: true
+            - name: varlibdockercontainers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+          volumes:
+          - name: varlogcontainers
+            hostPath:
+              path: /var/log/containers
+          - name: varlogpods
+            hostPath:
+              path: /var/log/pods
+          - name: varlibdockercontainers
+            hostPath:
+              path: /var/lib/docker/containers

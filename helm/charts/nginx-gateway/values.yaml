@@ -1,0 +1,13 @@
+apiKeys:
+  admin: sk-admin-changeme-abc123
+  client-app: sk-client-changeme-def456
+  my-client: sk-my-client-7g43UbW1JUhyPywDrM7TrULfWgbjfNQu
+  readonly: sk-readonly-changeme-ghi789
+host: api.phobert-medical.example.com
+kserve:
+  ingressIP: 34.142.155.250
+  modelName: phobert-medical
+  namespace: model-serving
+rateLimit:
+  burst: 20
+  requestsPerMinute: 60

@@ -1,0 +1,4 @@
+apiVersion: v2
+name: nginx-gateway
+description: API Gateway with API Key authentication for PhoBERT Medical NER
+version: 0.1.0

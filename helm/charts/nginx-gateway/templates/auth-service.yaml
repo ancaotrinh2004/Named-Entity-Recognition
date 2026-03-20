@@ -1,0 +1,123 @@
+---
+# Auth Service — nhận request từ NGINX auth-url
+# Validate X-API-Key header và trả về 200/401/403
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-key-auth
+  namespace: ingress-nginx
+  labels:
+    app: api-key-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-key-auth
+  template:
+    metadata:
+      labels:
+        app: api-key-auth
+    spec:
+      tolerations:
+        - key: "dedicated"
+          operator: "Equal"
+          value: "serving"
+          effect: "NoSchedule"
+      containers:
+        - name: auth
+          image: python:3.11-slim
+          command: ["python", "-c"]
+          args:
+            - |
+              import os
+              from http.server import HTTPServer, BaseHTTPRequestHandler
+
+              # Load valid keys từ Secret (mounted as env)
+              VALID_KEYS = set(
+                  k.strip()
+                  for k in os.environ.get("VALID_API_KEYS", "").splitlines()
+                  if k.strip()
+              )
+
+              # Load key→name map
+              KEY_MAP = {}
+              for line in os.environ.get("KEY_MAP", "").splitlines():
+                  if "=" in line:
+                      k, v = line.strip().split("=", 1)
+                      KEY_MAP[k] = v
+
+              print(f"Auth service started. Loaded {len(VALID_KEYS)} API keys.")
+
+              class AuthHandler(BaseHTTPRequestHandler):
+                  def do_GET(self):
+                      # Bỏ qua readiness probe từ kubelet (path /healthz)
+                      if self.path == "/healthz":
+                          self.send_response(200)
+                          self.end_headers()
+                          return
+
+                      api_key = self.headers.get("X-API-Key", "")
+
+                      if not api_key:
+                          self.send_response(401)
+                          self.send_header("Content-Type", "application/json")
+                          self.end_headers()
+                          self.wfile.write(b'{"error":"Missing X-API-Key header"}')
+                          return
+
+                      if api_key not in VALID_KEYS:
+                          self.send_response(403)
+                          self.send_header("Content-Type", "application/json")
+                          self.end_headers()
+                          self.wfile.write(b'{"error":"Invalid API key"}')
+                          return
+
+                      # Auth thành công — trả về 200 + client name header
+                      client_name = KEY_MAP.get(api_key, "unknown")
+                      self.send_response(200)
+                      self.send_header("X-Client-ID", client_name)
+                      self.end_headers()
+
+                  def log_message(self, fmt, *args):
+                      pass  # Tắt access log mặc định
+
+              HTTPServer(("0.0.0.0", 8080), AuthHandler).serve_forever()
+          env:
+            - name: VALID_API_KEYS
+              valueFrom:
+                secretKeyRef:
+                  name: api-keys
+                  key: valid-keys
+            - name: KEY_MAP
+              valueFrom:
+                secretKeyRef:
+                  name: api-keys
+                  key: key-map
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 5m
+              memory: 32Mi
+            limits:
+              cpu: 50m
+              memory: 64Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-key-auth
+  namespace: ingress-nginx
+spec:
+  selector:
+    app: api-key-auth
+  ports:
+    - port: 80
+      targetPort: 8080

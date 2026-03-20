@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mlflow.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mlflow.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "mlflow.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mlflow.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: mlflow
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command:
+          - mlflow
+          - server
+          - --host
+          - "0.0.0.0"
+          - --port
+          - "{{ .Values.service.port }}"
+          - --backend-store-uri
+          - "{{ .Values.backend.type }}:///{{ .Values.backend.path }}"
+          - --default-artifact-root
+          - "{{ .Values.artifactRoot }}"
+        ports:
+        - containerPort: {{ .Values.service.port }}
+          name: http
+        env:
+        - name: MLFLOW_S3_ENDPOINT_URL
+          value: {{ .Values.minio.endpoint | quote }}
+        - name: AWS_ACCESS_KEY_ID
+          value: {{ .Values.minio.accessKey | quote }}
+        - name: AWS_SECRET_ACCESS_KEY
+          value: {{ .Values.minio.secretKey | quote }}
+        volumeMounts:
+        - name: mlflow-data
+          mountPath: /mlflow
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+      volumes:
+      - name: mlflow-data
+        persistentVolumeClaim:
+          claimName: {{ include "mlflow.fullname" . }}-pvc

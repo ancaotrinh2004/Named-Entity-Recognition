@@ -1,0 +1,89 @@
+helmDefaults:
+  createNamespace: true
+  wait: true
+  timeout: 600
+  cleanupOnFail: true
+  atomic: false
+
+repositories:
+  - name: prometheus-community
+    url: https://prometheus-community.github.io/helm-charts
+  - name: grafana
+    url: https://grafana.github.io/helm-charts
+  - name: ingress-nginx
+    url: https://kubernetes.github.io/ingress-nginx
+
+releases:
+  # ── CI/CD ────────────────────────────────────────────────────────────
+  # - name: jenkins
+  #   namespace: ci-cd
+  #   chart: ./helm/charts/jenkins
+  #   values:
+  #     - ./helm/charts/jenkins/values.yaml
+
+  # ── MLOps stack ──────────────────────────────────────────────────────
+  - name: minio
+    namespace: mlops
+    chart: ./helm/charts/minio
+    values:
+      - ./helm/charts/minio/values.yaml
+
+  - name: mlflow
+    namespace: mlops
+    chart: ./helm/charts/mlflow
+    values:
+      - ./helm/charts/mlflow/values.yaml
+    needs:
+      - mlops/minio
+
+  # ── Model serving ─────────────────────────────────────────────────────
+  - name: phobert-inference
+    namespace: model-serving
+    chart: ./helm/charts/phobert-inference
+    values:
+      - ./helm/charts/phobert-inference/values.yaml
+
+  # ── NGINX Ingress Controller (phải up trước gateway) ─────────────────
+  - name: ingress-nginx
+    namespace: ingress-nginx
+    chart: ingress-nginx/ingress-nginx
+    version: "4.9.1"
+    values:
+      - controller:
+          replicaCount: 1
+          service:
+            type: LoadBalancer
+          config:
+            use-forwarded-headers: "true"
+            log-format-upstream: >
+              {"time":"$time_iso8601","remote_addr":"$remote_addr",
+              "request_id":"$req_id","status":$status,
+              "method":"$request_method","uri":"$request_uri",
+              "upstream":"$upstream_addr","duration":$request_time,
+              "bytes_sent":$bytes_sent}
+          metrics:
+            enabled: false
+            serviceMonitor:
+              enabled: false
+
+  # ── Backend — namespace hợp nhất về ingress-nginx ────────────────────
+  - name: phobert-backend
+    namespace: ingress-nginx          # khớp với values.yaml namespace
+    installed: true                   # fix: phải là true để needs resolve được
+    chart: ./helm/charts/backend
+    values:
+      - ./helm/charts/backend/values.yaml
+    needs:
+      - ingress-nginx/ingress-nginx   # ingress phải up trước
+      - model-serving/phobert-inference
+
+  # ── Gateway (depends on tất cả) ───────────────────────────────────────
+  - name: nginx-gateway
+    namespace: ingress-nginx
+    chart: ./helm/charts/nginx-gateway    # fix: thêm ./
+    values:
+      - ./helm/charts/nginx-gateway/values.yaml
+    needs:
+      - ingress-nginx/ingress-nginx
+      - model-serving/phobert-inference
+      - ingress-nginx/phobert-backend     # namespace/release phải khớp

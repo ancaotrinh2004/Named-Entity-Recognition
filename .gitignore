@@ -1,0 +1,48 @@
+# Python
+*.pyc
+__pycache__/
+*.ipynb_checkpoints
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.venv/
+env/
+
+# Data & Models
+# Không chặn cả thư mục data/, chỉ chặn nội dung bên trong
+data/**
+# Ngoại trừ các file .dvc để Git có thể theo dõi phiên bản dữ liệu
+!data/**/
+!data/**/*.dvc
+!data/.gitignore
+
+models/
+mlruns/
+*.h5
+*.pkl
+
+# DVC
+.dvc/cache
+.dvc/tmp
+.dvc/log
+
+# GCP Credentials
+.gcp/
+
+*.json
+!data/**/*.json
+
+# mlflow
+mlflow/minio_data
+mlflow/mlflow_data
+mlflow/mysql_data
+
+.coverage
+.pytest_cache/
+
+.terraform.lock.hcl
+terraform.tfstate.backup
+.terraform
