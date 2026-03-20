@@ -12,7 +12,8 @@
   - [CI/CD Pipeline](#cicd-pipeline)
   - [Model Serving](#model-serving)
   - [MLOps Stack](#mlops-stack)
-
+- [Set up GKE infrastructure](#set-up-gke-infrastructure)
+- [Demo](#demo)
 ---
 
 ## Repository Structure
@@ -226,3 +227,26 @@ The PhoBERT model is served via **KServe** on a dedicated node pool with `dedica
 | Kibana | `logging` | Log visualization |
 | Filebeat | `logging` | Log collection from pods |
 
+## Set up GKE infrastructure
+Login gcp:
+![alt text](images/image.png)
+Enable Kubenets engine API
+![alt text](images/image-1.png)
+Provision:
+```
+cd infrastructure
+terraform init
+terraform plan 
+terraform apply
+```
+Connect to GKE
+![alt text](images/image-2.png)
+![alt text](images/image-3.png)
+![alt text](images/image-4.png)
+## Demo
+Kibana:
+![alt text](images/image-5.png)
+API: 
+![alt text](images/image-6.png)
+![alt text](images/image-7.png)
+![alt text](images/image-8.png)
